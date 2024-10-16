@@ -9,8 +9,11 @@ use version::FfaVersion;
 
 #[macro_use]
 pub mod console;
+pub mod features;
 pub mod msg_wait;
 pub mod version;
+
+use features::FfaFeatures;
 
 pub type Result<T> = core::result::Result<T, FfaError>;
 
@@ -215,6 +218,10 @@ impl Ffa {
 
     pub fn version(&self) -> Result<FfaVersion> {
         FfaVersion::default().exec()
+    }
+
+    pub fn features(&self, id: u64, properties: u64) -> Result<FfaFeatures> {
+        FfaFeatures::new(id, properties).exec()
     }
 
     pub fn console_log(&self, s: &str) -> Result<()> {
