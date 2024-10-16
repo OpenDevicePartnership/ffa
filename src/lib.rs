@@ -153,6 +153,7 @@ impl From<FfaFunctionId> for u64 {
     }
 }
 
+#[derive(Default)]
 pub struct Ffa;
 
 impl Ffa {
@@ -199,6 +200,7 @@ impl Ffa {
     }
 }
 
+#[derive(Default)]
 pub struct FfaParams {
     pub x0: u64,
     pub x1: u64,
@@ -210,22 +212,8 @@ pub struct FfaParams {
     pub x7: u64,
 }
 
-impl Default for FfaParams {
-    fn default() -> Self {
-        Self {
-            x0: 0,
-            x1: 0,
-            x2: 0,
-            x3: 0,
-            x4: 0,
-            x5: 0,
-            x6: 0,
-            x7: 0,
-        }
-    }
-}
-
 /// Supervisor Call
+#[allow(clippy::too_many_arguments)]
 #[inline(always)]
 fn ffa_svc(
     _x0: u64,
