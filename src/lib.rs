@@ -3,6 +3,12 @@
 #![doc(html_root_url = "https://docs.rs/ffa/latest")]
 #![cfg_attr(not(test), no_std)]
 
+macro_rules! ffa_version {
+    ($major:expr, $minor:expr) => {
+        $major << 16 | $minor << 0
+    };
+}
+
 pub type Result<T> = core::result::Result<T, FfaError>;
 
 pub enum FfaError {
@@ -18,8 +24,8 @@ pub enum FfaError {
     UnknownError,
 }
 
-impl From<FfaError> for i32 {
-    fn from(value: FfaError) -> i32 {
+impl From<FfaError> for i64 {
+    fn from(value: FfaError) -> i64 {
         match value {
             FfaError::Ok => 0,
             FfaError::NotSupported => -1,
@@ -30,13 +36,13 @@ impl From<FfaError> for i32 {
             FfaError::Denied => -6,
             FfaError::Retry => -7,
             FfaError::Aborted => -8,
-            FfaError::UnknownError => i32::MIN,
+            FfaError::UnknownError => i64::MIN,
         }
     }
 }
 
-impl From<i32> for FfaError {
-    fn from(value: i32) -> FfaError {
+impl From<i64> for FfaError {
+    fn from(value: i64) -> FfaError {
         match value {
             0 => FfaError::Ok,
             -1 => FfaError::NotSupported,
@@ -61,121 +67,179 @@ impl FfaError {
     }
 }
 
-#[repr(u32)]
 pub enum FfaFunctionId {
-    FfaError = 0x84000060,
-    FfaSuccess32 = 0x84000061,
-    FfaSuccess64 = 0xc4000061,
-    FfaInterrupt = 0x84000062,
-    FfaVersion = 0x84000063,
-    FfaFeatures = 0x84000064,
-    FfaRxRelease = 0x84000065,
-    FfaRxTxMap32 = 0x84000066,
-    FfaRxTxMap64 = 0xc4000066,
-    FfaRxtxUnmap = 0x84000067,
-    FfaPartitionInfoGet = 0x84000068,
-    FfaIdGet = 0x84000069,
-    FfaMsgWait = 0x8400006b,
-    FfaMsgYield = 0x8400006c,
-    FfaMsgRun = 0x8400006d,
-    FfaMsgSend = 0x8400006e,
-    FfaMsgSendDirectReq32 = 0x8400006f,
-    FfaMsgSendDirectReq64 = 0xc400006f,
-    FfaMsgSendDirectResp32 = 0x84000070,
-    FfaMsgSendDirectResp64 = 0xc4000070,
-    FfaMsgPoll = 0x8400006a,
-    FfaMemDonate32 = 0x84000071,
-    FfaMemDonate64 = 0xc4000071,
-    FfaMemLend32 = 0x84000072,
-    FfaMemLend64 = 0xc4000072,
-    FfaMemShare32 = 0x84000073,
-    FfaMemShare64 = 0xc4000073,
-    FfaMemRetrieveReq32 = 0x84000074,
-    FfaMemRetrieveReq64 = 0xc4000074,
-    FfaMemRetrieveResp = 0x84000075,
-    FfaMemRelinquish = 0x84000076,
-    FfaMemReclaim = 0x84000077,
-    FfaMemFragRx = 0x8400007a,
-    FfaMemFragTx = 0x8400007b,
-    FfaMemPermGet = 0x84000088,
-    FfaMemPermSet = 0x84000089,
-    FfaConsoleLog32 = 0x8400008a,
-    FfaConsoleLog64 = 0xc400008a,
+    FfaError,
+    FfaSuccess32,
+    FfaSuccess64,
+    FfaInterrupt,
+    FfaVersion,
+    FfaFeatures,
+    FfaRxRelease,
+    FfaRxTxMap32,
+    FfaRxTxMap64,
+    FfaRxtxUnmap,
+    FfaPartitionInfoGet,
+    FfaIdGet,
+    FfaMsgWait,
+    FfaMsgYield,
+    FfaMsgRun,
+    FfaMsgSend,
+    FfaMsgSendDirectReq32,
+    FfaMsgSendDirectReq64,
+    FfaMsgSendDirectResp32,
+    FfaMsgSendDirectResp64,
+    FfaMsgPoll,
+    FfaMemDonate32,
+    FfaMemDonate64,
+    FfaMemLend32,
+    FfaMemLend64,
+    FfaMemShare32,
+    FfaMemShare64,
+    FfaMemRetrieveReq32,
+    FfaMemRetrieveReq64,
+    FfaMemRetrieveResp,
+    FfaMemRelinquish,
+    FfaMemReclaim,
+    FfaMemFragRx,
+    FfaMemFragTx,
+    FfaMemPermGet,
+    FfaMemPermSet,
+    FfaConsoleLog32,
+    FfaConsoleLog64,
 }
 
+impl From<FfaFunctionId> for u64 {
+    fn from(value: FfaFunctionId) -> u64 {
+        match value {
+            FfaFunctionId::FfaError => 0x84000060,
+            FfaFunctionId::FfaSuccess32 => 0x84000061,
+            FfaFunctionId::FfaSuccess64 => 0xc4000061,
+            FfaFunctionId::FfaInterrupt => 0x84000062,
+            FfaFunctionId::FfaVersion => 0x84000063,
+            FfaFunctionId::FfaFeatures => 0x84000064,
+            FfaFunctionId::FfaRxRelease => 0x84000065,
+            FfaFunctionId::FfaRxTxMap32 => 0x84000066,
+            FfaFunctionId::FfaRxTxMap64 => 0xc4000066,
+            FfaFunctionId::FfaRxtxUnmap => 0x84000067,
+            FfaFunctionId::FfaPartitionInfoGet => 0x84000068,
+            FfaFunctionId::FfaIdGet => 0x84000069,
+            FfaFunctionId::FfaMsgWait => 0x8400006b,
+            FfaFunctionId::FfaMsgYield => 0x8400006c,
+            FfaFunctionId::FfaMsgRun => 0x8400006d,
+            FfaFunctionId::FfaMsgSend => 0x8400006e,
+            FfaFunctionId::FfaMsgSendDirectReq32 => 0x8400006f,
+            FfaFunctionId::FfaMsgSendDirectReq64 => 0xc400006f,
+            FfaFunctionId::FfaMsgSendDirectResp32 => 0x84000070,
+            FfaFunctionId::FfaMsgSendDirectResp64 => 0xc4000070,
+            FfaFunctionId::FfaMsgPoll => 0x8400006a,
+            FfaFunctionId::FfaMemDonate32 => 0x84000071,
+            FfaFunctionId::FfaMemDonate64 => 0xc4000071,
+            FfaFunctionId::FfaMemLend32 => 0x84000072,
+            FfaFunctionId::FfaMemLend64 => 0xc4000072,
+            FfaFunctionId::FfaMemShare32 => 0x84000073,
+            FfaFunctionId::FfaMemShare64 => 0xc4000073,
+            FfaFunctionId::FfaMemRetrieveReq32 => 0x84000074,
+            FfaFunctionId::FfaMemRetrieveReq64 => 0xc4000074,
+            FfaFunctionId::FfaMemRetrieveResp => 0x84000075,
+            FfaFunctionId::FfaMemRelinquish => 0x84000076,
+            FfaFunctionId::FfaMemReclaim => 0x84000077,
+            FfaFunctionId::FfaMemFragRx => 0x8400007a,
+            FfaFunctionId::FfaMemFragTx => 0x8400007b,
+            FfaFunctionId::FfaMemPermGet => 0x84000088,
+            FfaFunctionId::FfaMemPermSet => 0x84000089,
+            FfaFunctionId::FfaConsoleLog32 => 0x8400008a,
+            FfaFunctionId::FfaConsoleLog64 => 0xc400008a,
+        }
+    }
+}
+
+#[derive(Default)]
 pub struct Ffa;
 
 impl Ffa {
-    const FFA_VERSION_MAJOR: u32 = 1;
-    const FFA_VERSION_MINOR: u32 = 0;
+    const FFA_VERSION_MAJOR: u64 = 1;
+    const FFA_VERSION_MINOR: u64 = 0;
+
     pub fn new() -> Self {
         Ffa {}
     }
 
-    pub fn version(&self) -> Result<u32> {
+    pub fn version(&self) -> Result<u64> {
         let params = FfaParams {
-            arg0: FfaFunctionId::FfaVersion as u32,
-            arg1: Self::FFA_VERSION_MAJOR << 16 | Self::FFA_VERSION_MINOR << 0,
+            x0: FfaFunctionId::FfaVersion.into(),
+            x1: ffa_version!(Self::FFA_VERSION_MAJOR, Self::FFA_VERSION_MINOR),
             ..Default::default()
         };
 
         let result = self.svc(params);
 
-        if result & (1 << 31) == 0 {
-            Ok(result)
+        // Checking for BIT 31 is enough here due to sign extension.
+        if result.x0 & (1 << 31) == 0 {
+            Ok(result.x0)
         } else {
-            Err(Into::<FfaError>::into(result as i32))
+            Err(Into::<FfaError>::into(result.x0 as i64))
         }
     }
 
-    fn svc(&self, params: FfaParams) -> u32 {
+    fn svc(&self, params: FfaParams) -> FfaParams {
+        let mut result = FfaParams::default();
+
         ffa_svc(
-            params.arg0,
-            params.arg1,
-            params.arg2,
-            params.arg3,
-            params.arg4,
-            params.arg5,
-            params.arg6,
-            params.arg7,
-        )
+            params.x0,
+            params.x1,
+            params.x2,
+            params.x3,
+            params.x4,
+            params.x5,
+            params.x6,
+            params.x7,
+            &mut result,
+        );
+
+        result
     }
 }
 
+#[derive(Default)]
 pub struct FfaParams {
-    pub arg0: u32,
-    pub arg1: u32,
-    pub arg2: u32,
-    pub arg3: u32,
-    pub arg4: u32,
-    pub arg5: u32,
-    pub arg6: u32,
-    pub arg7: u32,
-}
-
-impl Default for FfaParams {
-    fn default() -> Self {
-        Self {
-            arg0: 0,
-            arg1: 0,
-            arg2: 0,
-            arg3: 0,
-            arg4: 0,
-            arg5: 0,
-            arg6: 0,
-            arg7: 0,
-        }
-    }
+    pub x0: u64,
+    pub x1: u64,
+    pub x2: u64,
+    pub x3: u64,
+    pub x4: u64,
+    pub x5: u64,
+    pub x6: u64,
+    pub x7: u64,
 }
 
 /// Supervisor Call
+#[allow(clippy::too_many_arguments)]
 #[inline(always)]
-fn ffa_svc(_arg0: u32, _arg1: u32, _arg2: u32, _arg3: u32, _arg4: u32, _arg5: u32, _arg6: u32, _arg7: u32) -> u32 {
+fn ffa_svc(
+    _x0: u64,
+    _x1: u64,
+    _x2: u64,
+    _x3: u64,
+    _x4: u64,
+    _x5: u64,
+    _x6: u64,
+    _x7: u64,
+    _result: &mut FfaParams,
+) {
     #[cfg(target_arch = "aarch64")]
     unsafe {
-        let result = 0u32;
-        core::arch::asm!("svc #0", "mov x0, {result}", result = out(reg) _, options(nomem, nostack));
-        result
+        core::arch::asm!(
+            "svc #0",
+            inout("x0") _x0 => _result.x0,
+            inout("x1") _x1 => _result.x1,
+            inout("x2") _x2 => _result.x2,
+            inout("x3") _x3 => _result.x3,
+            inout("x4") _x4 => _result.x4,
+            inout("x5") _x5 => _result.x5,
+            inout("x6") _x6 => _result.x6,
+            inout("x7") _x7 => _result.x7,
+            options(nomem, nostack)
+        );
     }
 
     #[cfg(not(target_arch = "aarch64"))]
@@ -187,7 +251,7 @@ fn ffa_svc(_arg0: u32, _arg1: u32, _arg2: u32, _arg3: u32, _arg4: u32, _arg5: u3
 //         let mut buf = [0u8; 8];
 //         let len = 8.min(c.len());
 //         buf[..len].copy_from_slice(&c[..len]);
-//         u32::from_le_bytes(buf)
+//         u64::from_le_bytes(buf)
 //     }).enumerate() {
 //         println!("Arg{}: {:016x}", i, arg);
 //     }
@@ -199,7 +263,7 @@ fn ffa_svc(_arg0: u32, _arg1: u32, _arg2: u32, _arg3: u32, _arg4: u32, _arg5: u3
 //         let mut buf = [0u8; 8];
 //         let len = 8.min(c.len());
 //         buf[..len].copy_from_slice(&c[..len]);
-//         u32::from_le_bytes(buf)
+//         u64::from_le_bytes(buf)
 //     }).collect::<Vec<_>>();
 //     let decoded = encoded.iter().flat_map(|c| c.to_le_bytes()).map(|c| char::from(c)).collect::<Vec<_>>();
 //     println!(r##"
