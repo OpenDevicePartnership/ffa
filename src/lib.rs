@@ -114,8 +114,8 @@ impl Ffa {
 
     pub fn version(&self) -> Result<u32> {
         let params = FfaParams {
-            arg0: FfaFunctionId::FfaVersion as u32,
-            arg1: Self::FFA_VERSION_MAJOR << 16 | Self::FFA_VERSION_MINOR << 0,
+            x0: FfaFunctionId::FfaVersion as u32,
+            x1: Self::FFA_VERSION_MAJOR << 16 | Self::FFA_VERSION_MINOR << 0,
             ..Default::default()
         };
 
@@ -130,47 +130,40 @@ impl Ffa {
 
     fn svc(&self, params: FfaParams) -> u32 {
         ffa_svc(
-            params.arg0,
-            params.arg1,
-            params.arg2,
-            params.arg3,
-            params.arg4,
-            params.arg5,
-            params.arg6,
-            params.arg7,
+            params.x0, params.x1, params.x2, params.x3, params.x4, params.x5, params.x6, params.x7,
         )
     }
 }
 
 pub struct FfaParams {
-    pub arg0: u32,
-    pub arg1: u32,
-    pub arg2: u32,
-    pub arg3: u32,
-    pub arg4: u32,
-    pub arg5: u32,
-    pub arg6: u32,
-    pub arg7: u32,
+    pub x0: u32,
+    pub x1: u32,
+    pub x2: u32,
+    pub x3: u32,
+    pub x4: u32,
+    pub x5: u32,
+    pub x6: u32,
+    pub x7: u32,
 }
 
 impl Default for FfaParams {
     fn default() -> Self {
         Self {
-            arg0: 0,
-            arg1: 0,
-            arg2: 0,
-            arg3: 0,
-            arg4: 0,
-            arg5: 0,
-            arg6: 0,
-            arg7: 0,
+            x0: 0,
+            x1: 0,
+            x2: 0,
+            x3: 0,
+            x4: 0,
+            x5: 0,
+            x6: 0,
+            x7: 0,
         }
     }
 }
 
 /// Supervisor Call
 #[inline(always)]
-fn ffa_svc(_arg0: u32, _arg1: u32, _arg2: u32, _arg3: u32, _arg4: u32, _arg5: u32, _arg6: u32, _arg7: u32) -> u32 {
+fn ffa_svc(_x0: u32, _x1: u32, _x2: u32, _x3: u32, _x4: u32, _x5: u32, _x6: u32, _x7: u32) -> u32 {
     #[cfg(target_arch = "aarch64")]
     unsafe {
         let result = 0u32;
