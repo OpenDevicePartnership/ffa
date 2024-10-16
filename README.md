@@ -1,2 +1,1 @@
-# embedded-rust-template
-Template repository for Embedded Rust development
+# FF-A: Firmware Framework for ARMv8-A Profile
