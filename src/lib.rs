@@ -122,17 +122,29 @@ impl Ffa {
         let result = self.svc(params);
 
         // Checking for BIT 31 is enough here due to sign extension.
-        if result & (1 << 31) == 0 {
-            Ok(result)
+        if result.x0 & (1 << 31) == 0 {
+            Ok(result.x0)
         } else {
-            Err(Into::<FfaError>::into(result as i64))
+            Err(Into::<FfaError>::into(result.x0 as i64))
         }
     }
 
-    fn svc(&self, params: FfaParams) -> u64 {
+    fn svc(&self, params: FfaParams) -> FfaParams {
+        let mut result = FfaParams::default();
+
         ffa_svc(
-            params.x0, params.x1, params.x2, params.x3, params.x4, params.x5, params.x6, params.x7,
-        )
+            params.x0,
+            params.x1,
+            params.x2,
+            params.x3,
+            params.x4,
+            params.x5,
+            params.x6,
+            params.x7,
+            &mut result,
+        );
+
+        result
     }
 }
 
@@ -164,12 +176,18 @@ impl Default for FfaParams {
 
 /// Supervisor Call
 #[inline(always)]
-fn ffa_svc(_x0: u64, _x1: u64, _x2: u64, _x3: u64, _x4: u64, _x5: u64, _x6: u64, _x7: u64) -> u64 {
+fn ffa_svc(_x0: u64, _x1: u64, _x2: u64, _x3: u64, _x4: u64, _x5: u64, _x6: u64, _x7: u64, _result: &mut FfaParams) {
     #[cfg(target_arch = "aarch64")]
     unsafe {
-        let result = 0u64;
-        core::arch::asm!("svc #0", "mov x0, {result}", result = out(reg) _, options(nomem, nostack));
-        result
+        core::arch::asm!(
+            "svc #0",
+            "stp x0, x1, [{_result}, #0]",
+            "stp x2, x3, [{_result}, #16]",
+            "stp x4, x5, [{_result}, #32]",
+            "stp x5, x7, [{_result}, #48]",
+            _result = in(reg) _result,
+            options(nomem, nostack)
+        );
     }
 
     #[cfg(not(target_arch = "aarch64"))]
