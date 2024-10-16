@@ -11,12 +11,6 @@ keywords = [ "no_std", "embedded" ]
 categories = [ "embedded", "no-std" ]
 rust-version = "1.75"
 
-[dependencies]
-defmt = { version = "0.3.8", optional = true }
-
-[features]
-defmt = ["dep:defmt"]
-
 [package.metadata.docs.rs]
 targets = [
     "aarch64-unknown-none",
