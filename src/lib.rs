@@ -3,11 +3,9 @@
 #![doc(html_root_url = "https://docs.rs/ffa/latest")]
 #![cfg_attr(not(test), no_std)]
 
-macro_rules! ffa_version {
-    ($major:expr, $minor:expr) => {
-        $major << 16 | $minor << 0
-    };
-}
+use version::FfaVersion;
+
+mod version;
 
 pub type Result<T> = core::result::Result<T, FfaError>;
 
@@ -157,46 +155,12 @@ impl From<FfaFunctionId> for u64 {
 pub struct Ffa;
 
 impl Ffa {
-    const FFA_VERSION_MAJOR: u64 = 1;
-    const FFA_VERSION_MINOR: u64 = 3;
-
     pub fn new() -> Self {
         Ffa {}
     }
 
-    pub fn version(&self) -> Result<u64> {
-        let params = FfaParams {
-            x0: FfaFunctionId::FfaVersion.into(),
-            x1: ffa_version!(Self::FFA_VERSION_MAJOR, Self::FFA_VERSION_MINOR),
-            ..Default::default()
-        };
-
-        let result = self.svc(params);
-
-        // Checking for BIT 31 is enough here due to sign extension.
-        if result.x0 & (1 << 31) == 0 {
-            Ok(result.x0)
-        } else {
-            Err(Into::<FfaError>::into(result.x0 as i64))
-        }
-    }
-
-    fn svc(&self, params: FfaParams) -> FfaParams {
-        let mut result = FfaParams::default();
-
-        ffa_svc(
-            params.x0,
-            params.x1,
-            params.x2,
-            params.x3,
-            params.x4,
-            params.x5,
-            params.x6,
-            params.x7,
-            &mut result,
-        );
-
-        result
+    pub fn version(&self) -> Result<FfaVersion> {
+        FfaVersion::default().exec()
     }
 }
 
@@ -213,9 +177,27 @@ pub struct FfaParams {
 }
 
 /// Supervisor Call
+pub(crate) fn ffa_svc(params: FfaParams) -> FfaParams {
+    let mut result = FfaParams::default();
+
+    ffa_svc_inner(
+        params.x0,
+        params.x1,
+        params.x2,
+        params.x3,
+        params.x4,
+        params.x5,
+        params.x6,
+        params.x7,
+        &mut result,
+    );
+
+    result
+}
+
 #[allow(clippy::too_many_arguments)]
 #[inline(always)]
-fn ffa_svc(
+fn ffa_svc_inner(
     _x0: u64,
     _x1: u64,
     _x2: u64,
