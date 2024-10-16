@@ -18,8 +18,8 @@ pub enum FfaError {
     UnknownError,
 }
 
-impl From<FfaError> for i32 {
-    fn from(value: FfaError) -> i32 {
+impl From<FfaError> for i64 {
+    fn from(value: FfaError) -> i64 {
         match value {
             FfaError::Ok => 0,
             FfaError::NotSupported => -1,
@@ -30,13 +30,13 @@ impl From<FfaError> for i32 {
             FfaError::Denied => -6,
             FfaError::Retry => -7,
             FfaError::Aborted => -8,
-            FfaError::UnknownError => i32::MIN,
+            FfaError::UnknownError => i64::MIN,
         }
     }
 }
 
-impl From<i32> for FfaError {
-    fn from(value: i32) -> FfaError {
+impl From<i64> for FfaError {
+    fn from(value: i64) -> FfaError {
         match value {
             0 => FfaError::Ok,
             -1 => FfaError::NotSupported,
@@ -61,7 +61,7 @@ impl FfaError {
     }
 }
 
-#[repr(u32)]
+#[repr(u64)]
 pub enum FfaFunctionId {
     FfaError = 0x84000060,
     FfaSuccess32 = 0x84000061,
@@ -106,15 +106,15 @@ pub enum FfaFunctionId {
 pub struct Ffa;
 
 impl Ffa {
-    const FFA_VERSION_MAJOR: u32 = 1;
-    const FFA_VERSION_MINOR: u32 = 0;
+    const FFA_VERSION_MAJOR: u64 = 1;
+    const FFA_VERSION_MINOR: u64 = 0;
     pub fn new() -> Self {
         Ffa {}
     }
 
-    pub fn version(&self) -> Result<u32> {
+    pub fn version(&self) -> Result<u64> {
         let params = FfaParams {
-            x0: FfaFunctionId::FfaVersion as u32,
+            x0: FfaFunctionId::FfaVersion as u64,
             x1: Self::FFA_VERSION_MAJOR << 16 | Self::FFA_VERSION_MINOR << 0,
             ..Default::default()
         };
@@ -124,11 +124,11 @@ impl Ffa {
         if result & (1 << 31) == 0 {
             Ok(result)
         } else {
-            Err(Into::<FfaError>::into(result as i32))
+            Err(Into::<FfaError>::into(result as i64))
         }
     }
 
-    fn svc(&self, params: FfaParams) -> u32 {
+    fn svc(&self, params: FfaParams) -> u64 {
         ffa_svc(
             params.x0, params.x1, params.x2, params.x3, params.x4, params.x5, params.x6, params.x7,
         )
@@ -136,14 +136,14 @@ impl Ffa {
 }
 
 pub struct FfaParams {
-    pub x0: u32,
-    pub x1: u32,
-    pub x2: u32,
-    pub x3: u32,
-    pub x4: u32,
-    pub x5: u32,
-    pub x6: u32,
-    pub x7: u32,
+    pub x0: u64,
+    pub x1: u64,
+    pub x2: u64,
+    pub x3: u64,
+    pub x4: u64,
+    pub x5: u64,
+    pub x6: u64,
+    pub x7: u64,
 }
 
 impl Default for FfaParams {
@@ -163,10 +163,10 @@ impl Default for FfaParams {
 
 /// Supervisor Call
 #[inline(always)]
-fn ffa_svc(_x0: u32, _x1: u32, _x2: u32, _x3: u32, _x4: u32, _x5: u32, _x6: u32, _x7: u32) -> u32 {
+fn ffa_svc(_x0: u64, _x1: u64, _x2: u64, _x3: u64, _x4: u64, _x5: u64, _x6: u64, _x7: u64) -> u64 {
     #[cfg(target_arch = "aarch64")]
     unsafe {
-        let result = 0u32;
+        let result = 0u64;
         core::arch::asm!("svc #0", "mov x0, {result}", result = out(reg) _, options(nomem, nostack));
         result
     }
@@ -180,7 +180,7 @@ fn ffa_svc(_x0: u32, _x1: u32, _x2: u32, _x3: u32, _x4: u32, _x5: u32, _x6: u32,
 //         let mut buf = [0u8; 8];
 //         let len = 8.min(c.len());
 //         buf[..len].copy_from_slice(&c[..len]);
-//         u32::from_le_bytes(buf)
+//         u64::from_le_bytes(buf)
 //     }).enumerate() {
 //         println!("Arg{}: {:016x}", i, arg);
 //     }
@@ -192,7 +192,7 @@ fn ffa_svc(_x0: u32, _x1: u32, _x2: u32, _x3: u32, _x4: u32, _x5: u32, _x6: u32,
 //         let mut buf = [0u8; 8];
 //         let len = 8.min(c.len());
 //         buf[..len].copy_from_slice(&c[..len]);
-//         u32::from_le_bytes(buf)
+//         u64::from_le_bytes(buf)
 //     }).collect::<Vec<_>>();
 //     let decoded = encoded.iter().flat_map(|c| c.to_le_bytes()).map(|c| char::from(c)).collect::<Vec<_>>();
 //     println!(r##"
