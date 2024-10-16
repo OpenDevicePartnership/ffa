@@ -38,7 +38,7 @@ impl FfaVersion {
 
         let result = ffa_svc(params);
 
-        // Checking for BIT 31 is enough here due to sign extension.
+        // Specification explicitly calls out checking bit 31
         if result.x0 & (1 << 31) == 0 {
             Ok(Self {
                 _major: (result.x0 >> 16) as u16,
