@@ -3,6 +3,12 @@
 #![doc(html_root_url = "https://docs.rs/ffa/latest")]
 #![cfg_attr(not(test), no_std)]
 
+macro_rules! ffa_version {
+    ($major:expr, $minor:expr) => {
+        $major << 16 | $minor << 0
+    };
+}
+
 pub type Result<T> = core::result::Result<T, FfaError>;
 
 pub enum FfaError {
@@ -108,6 +114,7 @@ pub struct Ffa;
 impl Ffa {
     const FFA_VERSION_MAJOR: u64 = 1;
     const FFA_VERSION_MINOR: u64 = 0;
+
     pub fn new() -> Self {
         Ffa {}
     }
@@ -115,7 +122,7 @@ impl Ffa {
     pub fn version(&self) -> Result<u64> {
         let params = FfaParams {
             x0: FfaFunctionId::FfaVersion as u64,
-            x1: Self::FFA_VERSION_MAJOR << 16 | Self::FFA_VERSION_MINOR << 0,
+            x1: ffa_version!(Self::FFA_VERSION_MAJOR, Self::FFA_VERSION_MINOR),
             ..Default::default()
         };
 
