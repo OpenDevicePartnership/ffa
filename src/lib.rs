@@ -227,16 +227,29 @@ impl Default for FfaParams {
 
 /// Supervisor Call
 #[inline(always)]
-fn ffa_svc(_x0: u64, _x1: u64, _x2: u64, _x3: u64, _x4: u64, _x5: u64, _x6: u64, _x7: u64, _result: &mut FfaParams) {
+fn ffa_svc(
+    _x0: u64,
+    _x1: u64,
+    _x2: u64,
+    _x3: u64,
+    _x4: u64,
+    _x5: u64,
+    _x6: u64,
+    _x7: u64,
+    _result: &mut FfaParams,
+) {
     #[cfg(target_arch = "aarch64")]
     unsafe {
         core::arch::asm!(
             "svc #0",
-            "stp x0, x1, [{_result}, #0]",
-            "stp x2, x3, [{_result}, #16]",
-            "stp x4, x5, [{_result}, #32]",
-            "stp x5, x7, [{_result}, #48]",
-            _result = in(reg) _result,
+            inout("x0") _x0 => _result.x0,
+            inout("x1") _x1 => _result.x1,
+            inout("x2") _x2 => _result.x2,
+            inout("x3") _x3 => _result.x3,
+            inout("x4") _x4 => _result.x4,
+            inout("x5") _x5 => _result.x5,
+            inout("x6") _x6 => _result.x6,
+            inout("x7") _x7 => _result.x7,
             options(nomem, nostack)
         );
     }
