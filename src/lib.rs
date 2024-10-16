@@ -121,6 +121,7 @@ impl Ffa {
 
         let result = self.svc(params);
 
+        // Checking for BIT 31 is enough here due to sign extension.
         if result & (1 << 31) == 0 {
             Ok(result)
         } else {
