@@ -158,7 +158,7 @@ pub struct Ffa;
 
 impl Ffa {
     const FFA_VERSION_MAJOR: u64 = 1;
-    const FFA_VERSION_MINOR: u64 = 0;
+    const FFA_VERSION_MINOR: u64 = 3;
 
     pub fn new() -> Self {
         Ffa {}
