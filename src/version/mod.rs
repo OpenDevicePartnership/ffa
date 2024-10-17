@@ -7,7 +7,6 @@ macro_rules! ffa_version {
 }
 
 #[derive(Default)]
-#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub struct FfaVersion {
     _major: u16,
     _minor: u16,
