@@ -67,14 +67,12 @@ impl FfaError {
 
 pub enum FfaFunctionId {
     FfaError,
-    FfaSuccess32,
-    FfaSuccess64,
+    FfaSuccess,
     FfaInterrupt,
     FfaVersion,
     FfaFeatures,
     FfaRxRelease,
-    FfaRxTxMap32,
-    FfaRxTxMap64,
+    FfaRxTxMap,
     FfaRxtxUnmap,
     FfaPartitionInfoGet,
     FfaIdGet,
@@ -82,19 +80,13 @@ pub enum FfaFunctionId {
     FfaMsgYield,
     FfaMsgRun,
     FfaMsgSend,
-    FfaMsgSendDirectReq32,
-    FfaMsgSendDirectReq64,
-    FfaMsgSendDirectResp32,
-    FfaMsgSendDirectResp64,
+    FfaMsgSendDirectReq,
+    FfaMsgSendDirectResp,
     FfaMsgPoll,
-    FfaMemDonate32,
-    FfaMemDonate64,
-    FfaMemLend32,
-    FfaMemLend64,
-    FfaMemShare32,
-    FfaMemShare64,
-    FfaMemRetrieveReq32,
-    FfaMemRetrieveReq64,
+    FfaMemDonate,
+    FfaMemLend,
+    FfaMemShare,
+    FfaMemRetrieveReq,
     FfaMemRetrieveResp,
     FfaMemRelinquish,
     FfaMemReclaim,
@@ -102,22 +94,19 @@ pub enum FfaFunctionId {
     FfaMemFragTx,
     FfaMemPermGet,
     FfaMemPermSet,
-    FfaConsoleLog32,
-    FfaConsoleLog64,
+    FfaConsoleLog,
 }
 
 impl From<FfaFunctionId> for u64 {
     fn from(value: FfaFunctionId) -> u64 {
         match value {
             FfaFunctionId::FfaError => 0x84000060,
-            FfaFunctionId::FfaSuccess32 => 0x84000061,
-            FfaFunctionId::FfaSuccess64 => 0xc4000061,
+            FfaFunctionId::FfaSuccess => 0xc4000061,
             FfaFunctionId::FfaInterrupt => 0x84000062,
             FfaFunctionId::FfaVersion => 0x84000063,
             FfaFunctionId::FfaFeatures => 0x84000064,
             FfaFunctionId::FfaRxRelease => 0x84000065,
-            FfaFunctionId::FfaRxTxMap32 => 0x84000066,
-            FfaFunctionId::FfaRxTxMap64 => 0xc4000066,
+            FfaFunctionId::FfaRxTxMap => 0xc4000066,
             FfaFunctionId::FfaRxtxUnmap => 0x84000067,
             FfaFunctionId::FfaPartitionInfoGet => 0x84000068,
             FfaFunctionId::FfaIdGet => 0x84000069,
@@ -125,19 +114,13 @@ impl From<FfaFunctionId> for u64 {
             FfaFunctionId::FfaMsgYield => 0x8400006c,
             FfaFunctionId::FfaMsgRun => 0x8400006d,
             FfaFunctionId::FfaMsgSend => 0x8400006e,
-            FfaFunctionId::FfaMsgSendDirectReq32 => 0x8400006f,
-            FfaFunctionId::FfaMsgSendDirectReq64 => 0xc400006f,
-            FfaFunctionId::FfaMsgSendDirectResp32 => 0x84000070,
-            FfaFunctionId::FfaMsgSendDirectResp64 => 0xc4000070,
+            FfaFunctionId::FfaMsgSendDirectReq => 0xc400006f,
+            FfaFunctionId::FfaMsgSendDirectResp => 0xc4000070,
             FfaFunctionId::FfaMsgPoll => 0x8400006a,
-            FfaFunctionId::FfaMemDonate32 => 0x84000071,
-            FfaFunctionId::FfaMemDonate64 => 0xc4000071,
-            FfaFunctionId::FfaMemLend32 => 0x84000072,
-            FfaFunctionId::FfaMemLend64 => 0xc4000072,
-            FfaFunctionId::FfaMemShare32 => 0x84000073,
-            FfaFunctionId::FfaMemShare64 => 0xc4000073,
-            FfaFunctionId::FfaMemRetrieveReq32 => 0x84000074,
-            FfaFunctionId::FfaMemRetrieveReq64 => 0xc4000074,
+            FfaFunctionId::FfaMemDonate => 0xc4000071,
+            FfaFunctionId::FfaMemLend => 0xc4000072,
+            FfaFunctionId::FfaMemShare => 0xc4000073,
+            FfaFunctionId::FfaMemRetrieveReq => 0xc4000074,
             FfaFunctionId::FfaMemRetrieveResp => 0x84000075,
             FfaFunctionId::FfaMemRelinquish => 0x84000076,
             FfaFunctionId::FfaMemReclaim => 0x84000077,
@@ -145,8 +128,7 @@ impl From<FfaFunctionId> for u64 {
             FfaFunctionId::FfaMemFragTx => 0x8400007b,
             FfaFunctionId::FfaMemPermGet => 0x84000088,
             FfaFunctionId::FfaMemPermSet => 0x84000089,
-            FfaFunctionId::FfaConsoleLog32 => 0x8400008a,
-            FfaFunctionId::FfaConsoleLog64 => 0xc400008a,
+            FfaFunctionId::FfaConsoleLog => 0xc400008a,
         }
     }
 }
@@ -174,52 +156,51 @@ pub struct FfaParams {
     pub x5: u64,
     pub x6: u64,
     pub x7: u64,
+    pub x8: u64,
+    pub x9: u64,
+    pub x10: u64,
+    pub x11: u64,
+    pub x12: u64,
+    pub x13: u64,
+    pub x14: u64,
+    pub x15: u64,
+    pub x16: u64,
+    pub x17: u64,
 }
 
 /// Supervisor Call
 pub(crate) fn ffa_svc(params: FfaParams) -> FfaParams {
     let mut result = FfaParams::default();
 
-    ffa_svc_inner(
-        params.x0,
-        params.x1,
-        params.x2,
-        params.x3,
-        params.x4,
-        params.x5,
-        params.x6,
-        params.x7,
-        &mut result,
-    );
+    ffa_svc_inner(&params, &mut result);
 
     result
 }
 
-#[allow(clippy::too_many_arguments)]
 #[inline(always)]
-fn ffa_svc_inner(
-    _x0: u64,
-    _x1: u64,
-    _x2: u64,
-    _x3: u64,
-    _x4: u64,
-    _x5: u64,
-    _x6: u64,
-    _x7: u64,
-    _result: &mut FfaParams,
-) {
+fn ffa_svc_inner(_params: &FfaParams, _result: &mut FfaParams) {
     #[cfg(target_arch = "aarch64")]
     unsafe {
         core::arch::asm!(
             "svc #0",
-            inout("x0") _x0 => _result.x0,
-            inout("x1") _x1 => _result.x1,
-            inout("x2") _x2 => _result.x2,
-            inout("x3") _x3 => _result.x3,
-            inout("x4") _x4 => _result.x4,
-            inout("x5") _x5 => _result.x5,
-            inout("x6") _x6 => _result.x6,
-            inout("x7") _x7 => _result.x7,
+            inout("x0") _params.x0 => _result.x0,
+            inout("x1") _params.x1 => _result.x1,
+            inout("x2") _params.x2 => _result.x2,
+            inout("x3") _params.x3 => _result.x3,
+            inout("x4") _params.x4 => _result.x4,
+            inout("x5") _params.x5 => _result.x5,
+            inout("x6") _params.x6 => _result.x6,
+            inout("x7") _params.x7 => _result.x7,
+            inout("x8") _params.x8 => _result.x8,
+            inout("x9") _params.x9 => _result.x9,
+            inout("x10") _params.x10 => _result.x10,
+            inout("x11") _params.x11 => _result.x11,
+            inout("x12") _params.x12 => _result.x12,
+            inout("x13") _params.x13 => _result.x13,
+            inout("x14") _params.x14 => _result.x14,
+            inout("x15") _params.x15 => _result.x15,
+            inout("x16") _params.x16 => _result.x16,
+            inout("x17") _params.x17 => _result.x17,
             options(nomem, nostack)
         );
     }
