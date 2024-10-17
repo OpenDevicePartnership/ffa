@@ -3,12 +3,17 @@
 #![doc(html_root_url = "https://docs.rs/ffa/latest")]
 #![cfg_attr(not(test), no_std)]
 
+use console::FfaConsole;
 use version::FfaVersion;
 
-mod version;
+#[macro_use]
+pub mod console;
+
+pub mod version;
 
 pub type Result<T> = core::result::Result<T, FfaError>;
 
+#[derive(PartialOrd, Ord, PartialEq, Eq)]
 pub enum FfaError {
     Ok,
     NotSupported,
@@ -144,6 +149,10 @@ impl Ffa {
     pub fn version(&self) -> Result<FfaVersion> {
         FfaVersion::default().exec()
     }
+
+    pub fn console_log(&self, s: &str) -> Result<()> {
+        FfaConsole::new().exec(s.as_bytes())
+    }
 }
 
 #[derive(Default)]
@@ -208,34 +217,3 @@ fn ffa_svc_inner(_params: &FfaParams, _result: &mut FfaParams) {
     #[cfg(not(target_arch = "aarch64"))]
     unimplemented!()
 }
-
-// pub fn console_log(input: &[u8]) {
-//     for (i, arg) in input.chunks(8).map(|c| {
-//         let mut buf = [0u8; 8];
-//         let len = 8.min(c.len());
-//         buf[..len].copy_from_slice(&c[..len]);
-//         u64::from_le_bytes(buf)
-//     }).enumerate() {
-//         println!("Arg{}: {:016x}", i, arg);
-//     }
-// }
-//
-// fn main() {
-//     let input = "testing this little thing. Will it work? What happens, therefore, when the input is very, very long? Will it be able to print everything?".as_bytes();
-//     let encoded = input.chunks(8).map(|c| {
-//         let mut buf = [0u8; 8];
-//         let len = 8.min(c.len());
-//         buf[..len].copy_from_slice(&c[..len]);
-//         u64::from_le_bytes(buf)
-//     }).collect::<Vec<_>>();
-//     let decoded = encoded.iter().flat_map(|c| c.to_le_bytes()).map(|c| char::from(c)).collect::<Vec<_>>();
-//     println!(r##"
-//     input:   {:?}
-//     encoded: {:016x?}
-//     decoded: {:?}
-//     "##, input, encoded, decoded);
-//     for (i, chunk) in input.chunks(48).enumerate() {
-//         println!("Handling chunk {i}");
-//         console_log(chunk);
-//     }
-// }
