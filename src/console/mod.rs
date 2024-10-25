@@ -50,12 +50,12 @@ impl FfaConsole {
         };
 
         let result = ffa_smc(params);
-        let error = FfaError::from(result.x0 as i64);
+        let error = FfaError::from(result.x2 as i64);
 
-        if error == FfaError::Ok {
-            Ok(())
-        } else {
-            Err(error)
+        match error {
+            FfaError::NotSupported | FfaError::InvalidParameters | FfaError::Retry => Err(error),
+            FfaError::Ok => Ok(()),
+            _ => unreachable!(),
         }
     }
 }
