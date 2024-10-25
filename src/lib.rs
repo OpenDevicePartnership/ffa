@@ -177,21 +177,21 @@ pub struct FfaParams {
     pub x17: u64,
 }
 
-/// Supervisor Call
-pub(crate) fn ffa_svc(params: FfaParams) -> FfaParams {
+/// Secure Monitor Call
+pub(crate) fn ffa_smc(params: FfaParams) -> FfaParams {
     let mut result = FfaParams::default();
 
-    ffa_svc_inner(&params, &mut result);
+    ffa_smc_inner(&params, &mut result);
 
     result
 }
 
 #[inline(always)]
-fn ffa_svc_inner(_params: &FfaParams, _result: &mut FfaParams) {
+fn ffa_smc_inner(_params: &FfaParams, _result: &mut FfaParams) {
     #[cfg(target_arch = "aarch64")]
     unsafe {
         core::arch::asm!(
-            "svc #0",
+            "smc #0",
             inout("x0") _params.x0 => _result.x0,
             inout("x1") _params.x1 => _result.x1,
             inout("x2") _params.x2 => _result.x2,

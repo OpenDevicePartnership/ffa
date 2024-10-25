@@ -1,6 +1,6 @@
 use core::fmt;
 
-use super::{ffa_svc, FfaError, FfaFunctionId, FfaParams, Result};
+use super::{ffa_smc, FfaError, FfaFunctionId, FfaParams, Result};
 
 #[derive(Default)]
 pub struct FfaConsole;
@@ -49,7 +49,7 @@ impl FfaConsole {
             x17: iter.next().unwrap_or(0),
         };
 
-        let result = ffa_svc(params);
+        let result = ffa_smc(params);
         let error = FfaError::from(result.x0 as i64);
 
         if error == FfaError::Ok {
