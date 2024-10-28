@@ -1,4 +1,4 @@
-use super::{ffa_svc, FfaError, FfaFunctionId, FfaParams, Result};
+use super::{ffa_smc, FfaError, FfaFunctionId, FfaParams, Result};
 
 macro_rules! ffa_version {
     ($major:expr, $minor:expr) => {
@@ -35,7 +35,7 @@ impl FfaVersion {
             ..Default::default()
         };
 
-        let result = ffa_svc(params);
+        let result = ffa_smc(params);
 
         // Specification explicitly calls out checking bit 31
         if result.x0 & (1 << 31) == 0 {
