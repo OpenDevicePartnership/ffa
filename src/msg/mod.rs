@@ -1,3 +1,5 @@
+use uuid::Uuid;
+
 use super::{ffa_smc, FfaDirectMsg, FfaError, FfaFunctionId, FfaParams, Result};
 
 #[derive(Default)]
@@ -22,7 +24,7 @@ impl FfaMsg {
     pub fn destination_id(&self) -> u16 {
         self._msg._destination_id
     }
-    pub fn uuid(&self) -> u128 {
+    pub fn uuid(&self) -> Uuid {
         self._msg._uuid
     }
 
