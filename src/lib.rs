@@ -8,22 +8,45 @@ use core::{mem, slice};
 use console::FfaConsole;
 use features::FfaFeatures;
 use msg::FfaMsg;
+use uuid::Uuid;
 use version::FfaVersion;
 
 #[macro_use]
 pub mod console;
 pub mod features;
 pub mod msg;
+pub mod notify;
 pub mod version;
 
 pub type Result<T> = core::result::Result<T, FfaError>;
+
+pub fn u64_to_uuid(high: u64, low: u64) -> Uuid {
+    let mut bytes = [0u8; 16];
+    bytes[..4].copy_from_slice(&high.to_be_bytes()[4..]);
+    bytes[4..8].copy_from_slice(&high.to_be_bytes()[..4]);
+    bytes[8..12].copy_from_slice(&low.to_be_bytes()[4..]);
+    bytes[12..].copy_from_slice(&low.to_be_bytes()[..4]);
+    Uuid::from_bytes(bytes)
+}
+
+fn uuid_to_u64(uuid: Uuid) -> (u64, u64) {
+    let bytes = uuid.as_bytes();
+    let hl = u32::from_be_bytes(bytes[..4].try_into().unwrap());
+    let hh = u32::from_be_bytes(bytes[4..8].try_into().unwrap());
+    let ll = u32::from_be_bytes(bytes[8..12].try_into().unwrap());
+    let lh = u32::from_be_bytes(bytes[12..16].try_into().unwrap());
+    (
+        (hh as u64) << 32 | (hl as u64),
+        (lh as u64) << 32 | (ll as u64),
+    )
+}
 
 #[derive(Default)]
 pub struct FfaDirectMsg {
     _function_id: u32,
     _source_id: u16,
     _destination_id: u16,
-    _uuid: u128,
+    _uuid: Uuid,
     _args64: [u64; 14],
 }
 
@@ -32,14 +55,14 @@ impl FfaDirectMsg {
         function_id: FfaFunctionId,
         source_id: Option<u16>,
         destination_id: Option<u16>,
-        uuid: Option<u128>,
+        uuid: Option<Uuid>,
         args64: Option<[u64; 14]>,
     ) -> FfaDirectMsg {
         FfaDirectMsg {
             _function_id: <FfaFunctionId as Into<u64>>::into(function_id) as u32,
             _source_id: source_id.unwrap_or(0),
             _destination_id: destination_id.unwrap_or(0),
-            _uuid: uuid.unwrap_or(0),
+            _uuid: uuid.unwrap_or(Uuid::nil()),
             _args64: args64.unwrap_or([0; 14]),
         }
     }
@@ -149,6 +172,8 @@ pub enum FfaFunctionId {
     FfaMemReclaim,
     FfaMemFragRx,
     FfaMemFragTx,
+    FfaNotificationBind,
+    FfaNotificationSet,
     FfaMemPermGet,
     FfaMemPermSet,
     FfaConsoleLog,
@@ -186,6 +211,8 @@ impl From<FfaFunctionId> for u64 {
             FfaFunctionId::FfaMemReclaim => 0x84000077,
             FfaFunctionId::FfaMemFragRx => 0x8400007a,
             FfaFunctionId::FfaMemFragTx => 0x8400007b,
+            FfaFunctionId::FfaNotificationBind => 0x8400007f,
+            FfaFunctionId::FfaNotificationSet => 0x84000081,
             FfaFunctionId::FfaMemPermGet => 0x84000088,
             FfaFunctionId::FfaMemPermSet => 0x84000089,
             FfaFunctionId::FfaConsoleLog => 0xc400008a,
@@ -225,6 +252,8 @@ impl From<u64> for FfaFunctionId {
             0x84000077 => FfaFunctionId::FfaMemReclaim,
             0x8400007a => FfaFunctionId::FfaMemFragRx,
             0x8400007b => FfaFunctionId::FfaMemFragTx,
+            0x8400007f => FfaFunctionId::FfaNotificationBind,
+            0x84000081 => FfaFunctionId::FfaNotificationSet,
             0x84000088 => FfaFunctionId::FfaMemPermGet,
             0x84000089 => FfaFunctionId::FfaMemPermSet,
             0xc400008a => FfaFunctionId::FfaConsoleLog,
@@ -241,7 +270,7 @@ impl From<FfaParams> for FfaDirectMsg {
             _function_id: params.x0 as u32, // Function id is in lower 32 bits of x0
             _source_id: (params.x1 >> 16) as u16, // Source in upper 16 bits
             _destination_id: params.x1 as u16, // Destination in lower 16 bits
-            _uuid: (params.x2 as u128) << 64 | params.x3 as u128,
+            _uuid: u64_to_uuid(params.x2, params.x3),
             _args64: [
                 params.x4, params.x5, params.x6, params.x7, params.x8, params.x9, params.x10,
                 params.x11, params.x12, params.x13, params.x14, params.x15, params.x16, params.x17,
@@ -252,11 +281,12 @@ impl From<FfaParams> for FfaDirectMsg {
 
 impl From<&FfaDirectMsg> for FfaParams {
     fn from(msg: &FfaDirectMsg) -> Self {
+        let (uuid_high, uuid_low) = uuid_to_u64(msg._uuid);
         FfaParams {
             x0: msg._function_id as u64,
             x1: ((msg._source_id as u64) << 16) | (msg._destination_id as u64),
-            x2: msg._uuid as u64,
-            x3: (msg._uuid >> 64) as u64,
+            x2: uuid_high,
+            x3: uuid_low,
             x4: msg._args64[0],
             x5: msg._args64[1],
             x6: msg._args64[2],

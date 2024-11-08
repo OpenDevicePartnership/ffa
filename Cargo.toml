@@ -16,3 +16,6 @@ targets = [
     "aarch64-unknown-none",
     "aarch64-unknown-none-softfloat",
 ]
+
+[dependencies]
+uuid = { version = "1.0", default-features = false, features = ["v1"] }
