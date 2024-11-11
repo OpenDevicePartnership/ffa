@@ -3,26 +3,87 @@
 #![doc(html_root_url = "https://docs.rs/ffa/latest")]
 #![cfg_attr(not(test), no_std)]
 
+use core::{mem, slice};
+
 use console::FfaConsole;
-use msg_wait::FfaMsgWait;
+use features::FfaFeatures;
+use msg::FfaMsg;
+use uuid::Uuid;
 use version::FfaVersion;
 
 #[macro_use]
 pub mod console;
 pub mod features;
-pub mod msg_wait;
+pub mod msg;
 pub mod version;
-
-use features::FfaFeatures;
 
 pub type Result<T> = core::result::Result<T, FfaError>;
 
-#[derive(Default, Copy, Clone)]
+pub fn u64_to_uuid(high: u64, low: u64) -> Uuid {
+    let mut bytes = [0u8; 16];
+    bytes[..4].copy_from_slice(&high.to_be_bytes()[4..]);
+    bytes[4..8].copy_from_slice(&high.to_be_bytes()[..4]);
+    bytes[8..12].copy_from_slice(&low.to_be_bytes()[4..]);
+    bytes[12..].copy_from_slice(&low.to_be_bytes()[..4]);
+    Uuid::from_bytes(bytes)
+}
+
+fn uuid_to_u64(uuid: Uuid) -> (u64, u64) {
+    let bytes = uuid.as_bytes();
+    let hl = u32::from_be_bytes(bytes[..4].try_into().unwrap());
+    let hh = u32::from_be_bytes(bytes[4..8].try_into().unwrap());
+    let ll = u32::from_be_bytes(bytes[8..12].try_into().unwrap());
+    let lh = u32::from_be_bytes(bytes[12..16].try_into().unwrap());
+    (
+        (hh as u64) << 32 | (hl as u64),
+        (lh as u64) << 32 | (ll as u64),
+    )
+}
+
+#[derive(Default)]
 pub struct FfaDirectMsg {
     _function_id: u32,
     _source_id: u16,
     _destination_id: u16,
-    _args64: [u64; 16],
+    _uuid: Uuid,
+    _args64: [u64; 14],
+}
+
+impl FfaDirectMsg {
+    pub fn new(
+        function_id: FfaFunctionId,
+        source_id: Option<u16>,
+        destination_id: Option<u16>,
+        uuid: Option<Uuid>,
+        args64: Option<[u64; 14]>,
+    ) -> FfaDirectMsg {
+        FfaDirectMsg {
+            _function_id: <FfaFunctionId as Into<u64>>::into(function_id) as u32,
+            _source_id: source_id.unwrap_or(0),
+            _destination_id: destination_id.unwrap_or(0),
+            _uuid: uuid.unwrap_or(Uuid::nil()),
+            _args64: args64.unwrap_or([0; 14]),
+        }
+    }
+
+    pub fn struct_to_args64<T>(&mut self, s: &T) {
+        let size = mem::size_of::<T>();
+        let args_len = self._args64.len();
+
+        unsafe {
+            let ptr = s as *const T as *const u8;
+            let byte_slice = slice::from_raw_parts(ptr, size);
+
+            for (i, chunk) in byte_slice.chunks(8).enumerate() {
+                if i >= args_len {
+                    break;
+                }
+                let mut buffer = [0u8; 8];
+                buffer[..chunk.len()].copy_from_slice(chunk);
+                self._args64[i] = u64::from_ne_bytes(buffer);
+            }
+        }
+    }
 }
 
 #[derive(PartialOrd, Ord, PartialEq, Eq)]
@@ -114,6 +175,7 @@ pub enum FfaFunctionId {
     FfaMemPermSet,
     FfaConsoleLog,
     FfaMsgSendDirectReq2,
+    FfaMsgSendDirectResp2,
 }
 
 impl From<FfaFunctionId> for u64 {
@@ -150,6 +212,7 @@ impl From<FfaFunctionId> for u64 {
             FfaFunctionId::FfaMemPermSet => 0x84000089,
             FfaFunctionId::FfaConsoleLog => 0xc400008a,
             FfaFunctionId::FfaMsgSendDirectReq2 => 0xc400008d,
+            FfaFunctionId::FfaMsgSendDirectResp2 => 0xc400008e,
         }
     }
 }
@@ -188,6 +251,7 @@ impl From<u64> for FfaFunctionId {
             0x84000089 => FfaFunctionId::FfaMemPermSet,
             0xc400008a => FfaFunctionId::FfaConsoleLog,
             0xc400008d => FfaFunctionId::FfaMsgSendDirectReq2,
+            0xc400008e => FfaFunctionId::FfaMsgSendDirectResp2,
             _ => panic!("Unknown FfaFunctionId value"),
         }
     }
@@ -199,11 +263,37 @@ impl From<FfaParams> for FfaDirectMsg {
             _function_id: params.x0 as u32, // Function id is in lower 32 bits of x0
             _source_id: (params.x1 >> 16) as u16, // Source in upper 16 bits
             _destination_id: params.x1 as u16, // Destination in lower 16 bits
+            _uuid: u64_to_uuid(params.x2, params.x3),
             _args64: [
-                params.x2, params.x3, params.x4, params.x5, params.x6, params.x7, params.x8,
-                params.x9, params.x10, params.x11, params.x12, params.x13, params.x14, params.x15,
-                params.x16, params.x17,
+                params.x4, params.x5, params.x6, params.x7, params.x8, params.x9, params.x10,
+                params.x11, params.x12, params.x13, params.x14, params.x15, params.x16, params.x17,
             ],
+        }
+    }
+}
+
+impl From<&FfaDirectMsg> for FfaParams {
+    fn from(msg: &FfaDirectMsg) -> Self {
+        let (uuid_high, uuid_low) = uuid_to_u64(msg._uuid);
+        FfaParams {
+            x0: msg._function_id as u64,
+            x1: ((msg._source_id as u64) << 16) | (msg._destination_id as u64),
+            x2: uuid_high,
+            x3: uuid_low,
+            x4: msg._args64[0],
+            x5: msg._args64[1],
+            x6: msg._args64[2],
+            x7: msg._args64[3],
+            x8: msg._args64[4],
+            x9: msg._args64[5],
+            x10: msg._args64[6],
+            x11: msg._args64[7],
+            x12: msg._args64[8],
+            x13: msg._args64[9],
+            x14: msg._args64[10],
+            x15: msg._args64[11],
+            x16: msg._args64[12],
+            x17: msg._args64[13],
         }
     }
 }
@@ -220,16 +310,26 @@ impl Ffa {
         FfaVersion::default().exec()
     }
 
-    pub fn features(&self, id: u64, properties: u64) -> Result<FfaFeatures> {
-        FfaFeatures::new(id, properties).exec()
-    }
-
     pub fn console_log(&self, s: &str) -> Result<()> {
         FfaConsole::new().exec(s.as_bytes())
     }
 
-    pub fn msg_wait(&self) -> Result<FfaMsgWait> {
-        FfaMsgWait::new().exec()
+    pub fn features(&self, id: u64, properties: u64) -> Result<FfaFeatures> {
+        FfaFeatures::new(id, properties).exec()
+    }
+
+    pub fn msg_wait(&self) -> Result<FfaMsg> {
+        FfaMsg::new().exec(&FfaDirectMsg::new(
+            FfaFunctionId::FfaMsgWait,
+            None,
+            None,
+            None,
+            None,
+        ))
+    }
+
+    pub fn msg_resp(&self, msg: &FfaDirectMsg) -> Result<FfaMsg> {
+        FfaMsg::new().exec(msg)
     }
 }
 
