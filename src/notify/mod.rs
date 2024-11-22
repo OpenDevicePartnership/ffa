@@ -1,8 +1,5 @@
 use super::{ffa_smc, FfaError, FfaFunctionId, FfaParams, Result};
 
-// Determined by the data that can fit in X2-x17
-const FFA_DIRECT_MAX_PACKET_SIZE: usize = 128;
-
 #[derive(Default)]
 pub struct FfaNotifyMsg {
     _function_id: u32,
@@ -96,14 +93,9 @@ impl FfaNotify {
     }
 
     pub fn extract_u8_at_index(&self, idx: usize) -> u8 {
-        // Make sure we access within range
-        if idx > FFA_DIRECT_MAX_PACKET_SIZE {
-            return 0;
-        }
-
-        let u64_index = idx / 8;
-        let byte_index = idx % 8;
-        (self._msg._args64[u64_index] >> (byte_index * 8) & 0xFF) as u8
+        // x2-x17 = 128 bytes
+        let args: [u8; 128] = unsafe { core::mem::transmute(self._msg._args64) };
+        args[idx]
     }
 
     pub fn exec(&self, msg: &FfaNotifyMsg) -> Result<Self> {
