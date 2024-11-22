@@ -7,9 +7,6 @@ pub struct FfaMsg {
     _msg: FfaDirectMsg,
 }
 
-// Determined by the data that can fit in X4-x17
-const FFA_DIRECT_MAX_PACKET_SIZE: usize = 112;
-
 impl FfaMsg {
     pub fn new() -> Self {
         Self::default()
@@ -33,14 +30,9 @@ impl FfaMsg {
     }
 
     pub fn extract_u8_at_index(&self, idx: usize) -> u8 {
-        // Make sure we access within range
-        if idx > FFA_DIRECT_MAX_PACKET_SIZE {
-            return 0;
-        }
-
-        let u64_index = idx / 8;
-        let byte_index = idx % 8;
-        (self._msg._args64[u64_index] >> (byte_index * 8) & 0xFF) as u8
+        // x4-x17 is 112 bytes
+        let args: [u8; 112] = unsafe { core::mem::transmute(self._msg._args64) };
+        args[idx]
     }
 
     pub(crate) fn exec(&self, msg: &FfaDirectMsg) -> Result<Self> {

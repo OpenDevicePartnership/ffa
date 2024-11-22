@@ -15,6 +15,7 @@ use version::FfaVersion;
 pub mod console;
 pub mod features;
 pub mod msg;
+pub mod notify;
 pub mod version;
 
 pub type Result<T> = core::result::Result<T, FfaError>;
@@ -171,6 +172,8 @@ pub enum FfaFunctionId {
     FfaMemReclaim,
     FfaMemFragRx,
     FfaMemFragTx,
+    FfaNotificationBind,
+    FfaNotificationSet,
     FfaMemPermGet,
     FfaMemPermSet,
     FfaConsoleLog,
@@ -208,6 +211,8 @@ impl From<FfaFunctionId> for u64 {
             FfaFunctionId::FfaMemReclaim => 0x84000077,
             FfaFunctionId::FfaMemFragRx => 0x8400007a,
             FfaFunctionId::FfaMemFragTx => 0x8400007b,
+            FfaFunctionId::FfaNotificationBind => 0x8400007f,
+            FfaFunctionId::FfaNotificationSet => 0x84000081,
             FfaFunctionId::FfaMemPermGet => 0x84000088,
             FfaFunctionId::FfaMemPermSet => 0x84000089,
             FfaFunctionId::FfaConsoleLog => 0xc400008a,
@@ -247,6 +252,8 @@ impl From<u64> for FfaFunctionId {
             0x84000077 => FfaFunctionId::FfaMemReclaim,
             0x8400007a => FfaFunctionId::FfaMemFragRx,
             0x8400007b => FfaFunctionId::FfaMemFragTx,
+            0x8400007f => FfaFunctionId::FfaNotificationBind,
+            0x84000081 => FfaFunctionId::FfaNotificationSet,
             0x84000088 => FfaFunctionId::FfaMemPermGet,
             0x84000089 => FfaFunctionId::FfaMemPermSet,
             0xc400008a => FfaFunctionId::FfaConsoleLog,
