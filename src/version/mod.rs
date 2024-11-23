@@ -14,7 +14,7 @@ pub struct FfaVersion {
 
 impl FfaVersion {
     const FFA_VERSION_MAJOR: u64 = 1;
-    const FFA_VERSION_MINOR: u64 = 3;
+    const FFA_VERSION_MINOR: u64 = 2;
 
     pub fn new() -> Self {
         Self::default()
