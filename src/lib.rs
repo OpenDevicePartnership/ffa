@@ -3,8 +3,6 @@
 #![doc(html_root_url = "https://docs.rs/ffa/latest")]
 #![cfg_attr(not(test), no_std)]
 
-use core::{mem, slice};
-
 use console::FfaConsole;
 use features::FfaFeatures;
 use msg::FfaMsg;
@@ -14,8 +12,10 @@ use version::FfaVersion;
 #[macro_use]
 pub mod console;
 pub mod features;
+pub mod memory;
 pub mod msg;
 pub mod notify;
+pub mod rxtx;
 pub mod version;
 
 pub type Result<T> = core::result::Result<T, FfaError>;
@@ -39,52 +39,6 @@ fn uuid_to_u64(uuid: Uuid) -> (u64, u64) {
         (hh as u64) << 32 | (hl as u64),
         (lh as u64) << 32 | (ll as u64),
     )
-}
-
-#[derive(Default)]
-pub struct FfaDirectMsg {
-    _function_id: u32,
-    _source_id: u16,
-    _destination_id: u16,
-    _uuid: Uuid,
-    _args64: [u64; 14],
-}
-
-impl FfaDirectMsg {
-    pub fn new(
-        function_id: FfaFunctionId,
-        source_id: Option<u16>,
-        destination_id: Option<u16>,
-        uuid: Option<Uuid>,
-        args64: Option<[u64; 14]>,
-    ) -> FfaDirectMsg {
-        FfaDirectMsg {
-            _function_id: <FfaFunctionId as Into<u64>>::into(function_id) as u32,
-            _source_id: source_id.unwrap_or(0),
-            _destination_id: destination_id.unwrap_or(0),
-            _uuid: uuid.unwrap_or(Uuid::nil()),
-            _args64: args64.unwrap_or([0; 14]),
-        }
-    }
-
-    pub fn struct_to_args64<T>(&mut self, s: &T) {
-        let size = mem::size_of::<T>();
-        let args_len = self._args64.len();
-
-        unsafe {
-            let ptr = s as *const T as *const u8;
-            let byte_slice = slice::from_raw_parts(ptr, size);
-
-            for (i, chunk) in byte_slice.chunks(8).enumerate() {
-                if i >= args_len {
-                    break;
-                }
-                let mut buffer = [0u8; 8];
-                buffer[..chunk.len()].copy_from_slice(chunk);
-                self._args64[i] = u64::from_ne_bytes(buffer);
-            }
-        }
-    }
 }
 
 #[derive(PartialOrd, Ord, PartialEq, Eq)]
@@ -153,7 +107,7 @@ pub enum FfaFunctionId {
     FfaFeatures,
     FfaRxRelease,
     FfaRxTxMap,
-    FfaRxtxUnmap,
+    FfaRxTxUnmap,
     FfaPartitionInfoGet,
     FfaIdGet,
     FfaMsgWait,
@@ -192,7 +146,7 @@ impl From<FfaFunctionId> for u64 {
             FfaFunctionId::FfaFeatures => 0x84000064,
             FfaFunctionId::FfaRxRelease => 0x84000065,
             FfaFunctionId::FfaRxTxMap => 0xc4000066,
-            FfaFunctionId::FfaRxtxUnmap => 0x84000067,
+            FfaFunctionId::FfaRxTxUnmap => 0x84000067,
             FfaFunctionId::FfaPartitionInfoGet => 0x84000068,
             FfaFunctionId::FfaIdGet => 0x84000069,
             FfaFunctionId::FfaMsgWait => 0x8400006b,
@@ -205,7 +159,7 @@ impl From<FfaFunctionId> for u64 {
             FfaFunctionId::FfaMemDonate => 0xc4000071,
             FfaFunctionId::FfaMemLend => 0xc4000072,
             FfaFunctionId::FfaMemShare => 0xc4000073,
-            FfaFunctionId::FfaMemRetrieveReq => 0xc4000074,
+            FfaFunctionId::FfaMemRetrieveReq => 0x84000074,
             FfaFunctionId::FfaMemRetrieveResp => 0x84000075,
             FfaFunctionId::FfaMemRelinquish => 0x84000076,
             FfaFunctionId::FfaMemReclaim => 0x84000077,
@@ -233,7 +187,7 @@ impl From<u64> for FfaFunctionId {
             0x84000064 => FfaFunctionId::FfaFeatures,
             0x84000065 => FfaFunctionId::FfaRxRelease,
             0xc4000066 => FfaFunctionId::FfaRxTxMap,
-            0x84000067 => FfaFunctionId::FfaRxtxUnmap,
+            0x84000067 => FfaFunctionId::FfaRxTxUnmap,
             0x84000068 => FfaFunctionId::FfaPartitionInfoGet,
             0x84000069 => FfaFunctionId::FfaIdGet,
             0x8400006b => FfaFunctionId::FfaMsgWait,
@@ -264,47 +218,6 @@ impl From<u64> for FfaFunctionId {
     }
 }
 
-impl From<FfaParams> for FfaDirectMsg {
-    fn from(params: FfaParams) -> FfaDirectMsg {
-        FfaDirectMsg {
-            _function_id: params.x0 as u32, // Function id is in lower 32 bits of x0
-            _source_id: (params.x1 >> 16) as u16, // Source in upper 16 bits
-            _destination_id: params.x1 as u16, // Destination in lower 16 bits
-            _uuid: u64_to_uuid(params.x2, params.x3),
-            _args64: [
-                params.x4, params.x5, params.x6, params.x7, params.x8, params.x9, params.x10,
-                params.x11, params.x12, params.x13, params.x14, params.x15, params.x16, params.x17,
-            ],
-        }
-    }
-}
-
-impl From<&FfaDirectMsg> for FfaParams {
-    fn from(msg: &FfaDirectMsg) -> Self {
-        let (uuid_high, uuid_low) = uuid_to_u64(msg._uuid);
-        FfaParams {
-            x0: msg._function_id as u64,
-            x1: ((msg._source_id as u64) << 16) | (msg._destination_id as u64),
-            x2: uuid_high,
-            x3: uuid_low,
-            x4: msg._args64[0],
-            x5: msg._args64[1],
-            x6: msg._args64[2],
-            x7: msg._args64[3],
-            x8: msg._args64[4],
-            x9: msg._args64[5],
-            x10: msg._args64[6],
-            x11: msg._args64[7],
-            x12: msg._args64[8],
-            x13: msg._args64[9],
-            x14: msg._args64[10],
-            x15: msg._args64[11],
-            x16: msg._args64[12],
-            x17: msg._args64[13],
-        }
-    }
-}
-
 #[derive(Default)]
 pub struct Ffa;
 
@@ -326,17 +239,15 @@ impl Ffa {
     }
 
     pub fn msg_wait(&self) -> Result<FfaMsg> {
-        FfaMsg::new().exec(&FfaDirectMsg::new(
-            FfaFunctionId::FfaMsgWait,
-            None,
-            None,
-            None,
-            None,
-        ))
+        let msg = FfaMsg {
+            function_id: FfaFunctionId::FfaMsgWait.into(),
+            ..Default::default()
+        };
+        msg.exec()
     }
 
-    pub fn msg_resp(&self, msg: &FfaDirectMsg) -> Result<FfaMsg> {
-        FfaMsg::new().exec(msg)
+    pub fn msg_resp(&self, msg: &FfaMsg) -> Result<FfaMsg> {
+        msg.exec()
     }
 }
 
@@ -363,7 +274,7 @@ pub struct FfaParams {
 }
 
 /// Secure Monitor Call
-pub(crate) fn ffa_smc(params: FfaParams) -> FfaParams {
+pub fn ffa_smc(params: FfaParams) -> FfaParams {
     let mut result = FfaParams::default();
 
     ffa_smc_inner(&params, &mut result);
