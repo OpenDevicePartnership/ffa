@@ -274,7 +274,7 @@ pub struct FfaParams {
 }
 
 /// Secure Monitor Call
-pub fn ffa_smc(params: FfaParams) -> FfaParams {
+pub(crate) fn ffa_smc(params: FfaParams) -> FfaParams {
     let mut result = FfaParams::default();
 
     ffa_smc_inner(&params, &mut result);
