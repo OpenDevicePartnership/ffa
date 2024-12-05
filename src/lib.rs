@@ -12,6 +12,7 @@ use version::FfaVersion;
 #[macro_use]
 pub mod console;
 pub mod features;
+pub mod indirect;
 pub mod memory;
 pub mod msg;
 pub mod notify;
