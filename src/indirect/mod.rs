@@ -23,7 +23,7 @@ pub struct AsyncMsgHeader {
     pub version: u16,
     pub count: u16,
     pub res0: u32,
-    pub bitmap: [AsyncMsgBitmap; 15],
+    pub bitmap: [AsyncMsgBitmap; 8],
 }
 
 #[derive(Default)]
@@ -34,13 +34,14 @@ impl FfaIndirectMsg {
         Self::default()
     }
 
-    pub fn init_indirect_msg(&self, base_addr: u64, length: usize) -> FfaError {
-        unsafe {
-            ptr::write_bytes(base_addr as *mut u8, 0, length);
+    /// # Safety
+    ///
+    /// This function directly initialzes physical memory base_addr
+    pub unsafe fn init_indirect_msg(&self, base_addr: u64, length: usize) -> FfaError {
+        ptr::write_bytes(base_addr as *mut u8, 0, length);
 
-            let asyncmsg = base_addr as *mut AsyncMsgHeader;
-            (*asyncmsg).count = QUEUE_ENTRY_COUNT;
-        }
+        let asyncmsg = base_addr as *mut AsyncMsgHeader;
+        (*asyncmsg).count = QUEUE_ENTRY_COUNT;
         FfaError::Ok
     }
 
@@ -55,9 +56,13 @@ impl FfaIndirectMsg {
     ) -> FfaError {
         let asyncmsg = base_addr as *mut AsyncMsgHeader;
         let entry_count = (*asyncmsg).count as usize;
-        let mut index = 0;
 
-        for b in &mut (*asyncmsg).bitmap {
+        for (index, b) in (*asyncmsg).bitmap.iter_mut().enumerate() {
+            // Make sure we don't go beyond entry_count
+            if index == entry_count {
+                return FfaError::NoMemory;
+            }
+
             let sn = b.seq_num;
             if sn == seq_num && b.state == QUEUE_STATE_VALID {
                 let length = b.length;
@@ -69,14 +74,10 @@ impl FfaIndirectMsg {
                 b.length = 0;
                 b.state = QUEUE_STATE_FREE;
                 b.seq_num = 0;
-                break;
+                return FfaError::Ok;
             }
-            index += 1;
         }
 
-        if index < entry_count {
-            return FfaError::Ok;
-        }
         FfaError::Retry
     }
 
@@ -88,10 +89,14 @@ impl FfaIndirectMsg {
         let asyncmsg = base_addr as *mut AsyncMsgHeader;
         let entry_count = (*asyncmsg).count as usize;
         let mut data_len = buf.len();
-        let mut bm_index: usize = 0;
         let mut data_index: usize = 0;
 
-        for b in &mut (*asyncmsg).bitmap {
+        for (bm_index, b) in (*asyncmsg).bitmap.iter_mut().enumerate() {
+            // Make sure we don't iterate beyond entry_count
+            if bm_index == entry_count {
+                return FfaError::NoMemory;
+            }
+
             let state = b.state;
             if state == QUEUE_STATE_FREE {
                 // Copy data first then update the header structure
@@ -110,15 +115,11 @@ impl FfaIndirectMsg {
 
                 // After we've copied over all the data break
                 if data_len == 0 {
-                    break;
+                    return FfaError::Ok;
                 }
             }
-            bm_index += 1;
         }
 
-        if bm_index < entry_count {
-            return FfaError::Ok;
-        }
         FfaError::NoMemory
     }
 }
