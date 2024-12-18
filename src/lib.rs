@@ -18,6 +18,7 @@ pub mod msg;
 pub mod notify;
 pub mod rxtx;
 pub mod version;
+pub mod yld;
 
 pub type Result<T> = core::result::Result<T, FfaError>;
 
@@ -42,7 +43,7 @@ fn uuid_to_u64(uuid: Uuid) -> (u64, u64) {
     )
 }
 
-#[derive(PartialOrd, Ord, PartialEq, Eq)]
+#[derive(PartialOrd, Ord, PartialEq, Eq, Debug)]
 pub enum FfaError {
     Ok,
     NotSupported,
