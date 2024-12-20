@@ -1,4 +1,6 @@
 # FF-A: Firmware Framework for ARMv8-A Profile
+[![check](https://github.com/pop-project/ffa/actions/workflows/check.yml/badge.svg)](https://github.com/pop-project/ffa/actions/workflows/check.yml)
+[![no-std](https://github.com/pop-project/ffa/actions/workflows/nostd.yml/badge.svg)](https://github.com/pop-project/ffa/actions/workflows/nostd.yml)
 ## Overview
 This repository is a crate for RUST services running under Hafnium that implements the FF-A protocol as described in DEN0077A "Firmware Framework Arm A-profile". This crate is implements the standard features that every service needs for communicating with Hafnium through FF-A.
 
