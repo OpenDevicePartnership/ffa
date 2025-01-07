@@ -100,6 +100,7 @@ impl FfaError {
     }
 }
 
+#[derive(Debug)]
 pub enum FfaFunctionId {
     FfaError,
     FfaSuccess64,
