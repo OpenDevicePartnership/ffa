@@ -3,16 +3,15 @@ use core::{mem, slice};
 use uuid::Uuid;
 
 use super::{ffa_smc, FfaError, FfaFunctionId, FfaParams, Result};
-use crate::{u64_to_uuid, uuid_to_u64};
 
 impl From<&FfaMsg> for FfaParams {
     fn from(msg: &FfaMsg) -> Self {
-        let (uuid_high, uuid_low) = uuid_to_u64(msg.uuid);
+        let (uuid_high, uuid_low) = msg.uuid.as_u64_pair();
         FfaParams {
             x0: msg.function_id,
             x1: ((msg.source_id as u64) << 16) | (msg.destination_id as u64),
-            x2: uuid_high,
-            x3: uuid_low,
+            x2: uuid_high.to_be(),
+            x3: uuid_low.to_be(),
             x4: msg.args64[0],
             x5: msg.args64[1],
             x6: msg.args64[2],
@@ -37,7 +36,7 @@ impl From<FfaParams> for FfaMsg {
             function_id: params.x0,              // Function id is in lower 32 bits of x0
             source_id: (params.x1 >> 16) as u16, // Source in upper 16 bits
             destination_id: params.x1 as u16,    // Destination in lower 16 bits
-            uuid: u64_to_uuid(params.x2, params.x3),
+            uuid: Uuid::from_u64_pair(params.x2.to_be(), params.x3.to_be()),
             args64: [
                 params.x4, params.x5, params.x6, params.x7, params.x8, params.x9, params.x10,
                 params.x11, params.x12, params.x13, params.x14, params.x15, params.x16, params.x17,
