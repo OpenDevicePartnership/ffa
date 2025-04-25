@@ -6,7 +6,6 @@
 use console::FfaConsole;
 use features::FfaFeatures;
 use msg::FfaMsg;
-use uuid::Uuid;
 use version::FfaVersion;
 
 #[macro_use]
@@ -21,27 +20,6 @@ pub mod version;
 pub mod yld;
 
 pub type Result<T> = core::result::Result<T, FfaError>;
-
-pub fn u64_to_uuid(high: u64, low: u64) -> Uuid {
-    let mut bytes = [0u8; 16];
-    bytes[..4].copy_from_slice(&high.to_be_bytes()[4..]);
-    bytes[4..8].copy_from_slice(&high.to_be_bytes()[..4]);
-    bytes[8..12].copy_from_slice(&low.to_be_bytes()[4..]);
-    bytes[12..].copy_from_slice(&low.to_be_bytes()[..4]);
-    Uuid::from_bytes(bytes)
-}
-
-fn uuid_to_u64(uuid: Uuid) -> (u64, u64) {
-    let bytes = uuid.as_bytes();
-    let hl = u32::from_be_bytes(bytes[..4].try_into().unwrap());
-    let hh = u32::from_be_bytes(bytes[4..8].try_into().unwrap());
-    let ll = u32::from_be_bytes(bytes[8..12].try_into().unwrap());
-    let lh = u32::from_be_bytes(bytes[12..16].try_into().unwrap());
-    (
-        (hh as u64) << 32 | (hl as u64),
-        (lh as u64) << 32 | (ll as u64),
-    )
-}
 
 #[derive(PartialOrd, Ord, PartialEq, Eq, Debug)]
 pub enum FfaError {
