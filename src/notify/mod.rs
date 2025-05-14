@@ -63,9 +63,9 @@ impl FfaNotify {
         let params: FfaParams = self.into();
 
         let result = ffa_smc(params);
-        let id = FfaFunctionId::from(result.x0);
+        let function_id = FfaFunctionId::try_from(result.x0).map_err(|_| FfaError::UnknownError)?;
 
-        match id {
+        match function_id {
             FfaFunctionId::FfaSuccess32 => Ok(result.into()),
             FfaFunctionId::FfaError => Err(FfaError::InvalidParameters),
             _ => panic!("Unknown FfaFunctionId"),
