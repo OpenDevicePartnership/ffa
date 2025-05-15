@@ -1,8 +1,7 @@
 use super::{ffa_smc, FfaError, FfaFunctionId, FfaParams};
 
-#[derive(Default)]
 pub struct FfaYield {
-    pub function_id: u64,
+    pub function_id: FfaFunctionId,
     pub vcpu_id: u16,
     pub endpoint_id: u16,
     pub timeout_lo: u32,
@@ -37,7 +36,7 @@ impl FfaYield {
 
         let result = ffa_smc(params);
 
-        match result.x0.into() {
+        match result.x0.try_into().unwrap() {
             FfaFunctionId::FfaSuccess32 => FfaError::Ok,
             FfaFunctionId::FfaError => (result.x2 as i64).into(),
             _ => {

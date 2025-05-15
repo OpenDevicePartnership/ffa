@@ -32,7 +32,7 @@ impl FfaRxTxMsg {
 
         let err = result.x2 as i64;
 
-        match FfaFunctionId::from(result.x0) {
+        match FfaFunctionId::try_from(result.x0).unwrap() {
             FfaFunctionId::FfaSuccess32 => FfaError::Ok,
             FfaFunctionId::FfaError => err.into(),
             _ => panic!("Unknown error"),
