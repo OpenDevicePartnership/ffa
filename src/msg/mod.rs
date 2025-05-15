@@ -86,12 +86,7 @@ impl FfaMsg {
         let params: FfaParams = self.into();
         let result = ffa_smc(params);
 
-        match self.function_id {
-            FfaFunctionId::FfaMsgSendDirectReq | FfaFunctionId::FfaMsgSendDirectReq2 => {
-                result.try_into().map_err(|_| FfaError::UnknownError)
-            }
-            FfaFunctionId::FfaError => Err(FfaError::InvalidParameters),
-            _ => panic!("Unknown FfaFunctionId {:?}", self.function_id),
-        }
+        // Return FfaMsg or error to caller
+        result.try_into().map_err(|_| FfaError::UnknownError)
     }
 }
