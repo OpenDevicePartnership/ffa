@@ -8,7 +8,7 @@ impl From<&FfaMsg> for FfaParams {
     fn from(msg: &FfaMsg) -> Self {
         let (uuid_high, uuid_low) = msg.uuid.as_u64_pair();
         FfaParams {
-            x0: msg.function_id,
+            x0: msg.function_id.into(),
             x1: ((msg.source_id as u64) << 16) | (msg.destination_id as u64),
             x2: uuid_high.to_be(),
             x3: uuid_low.to_be(),
@@ -30,10 +30,13 @@ impl From<&FfaMsg> for FfaParams {
     }
 }
 
-impl From<FfaParams> for FfaMsg {
-    fn from(params: FfaParams) -> FfaMsg {
-        FfaMsg {
-            function_id: params.x0,              // Function id is in lower 32 bits of x0
+impl TryFrom<FfaParams> for FfaMsg {
+    type Error = ();
+
+    fn try_from(params: FfaParams) -> core::result::Result<Self, Self::Error> {
+        let function_id = FfaFunctionId::try_from(params.x0)?;
+        Ok(FfaMsg {
+            function_id,
             source_id: (params.x1 >> 16) as u16, // Source in upper 16 bits
             destination_id: params.x1 as u16,    // Destination in lower 16 bits
             uuid: Uuid::from_u64_pair(params.x2.to_be(), params.x3.to_be()),
@@ -41,13 +44,13 @@ impl From<FfaParams> for FfaMsg {
                 params.x4, params.x5, params.x6, params.x7, params.x8, params.x9, params.x10,
                 params.x11, params.x12, params.x13, params.x14, params.x15, params.x16, params.x17,
             ],
-        }
+        })
     }
 }
 
-#[derive(Default)]
+#[derive(Debug)]
 pub struct FfaMsg {
-    pub function_id: u64,
+    pub function_id: FfaFunctionId,
     pub source_id: u16,
     pub destination_id: u16,
     pub uuid: Uuid,
@@ -55,10 +58,6 @@ pub struct FfaMsg {
 }
 
 impl FfaMsg {
-    pub fn new() -> Self {
-        Self::default()
-    }
-
     pub fn extract_u8_at_index(&self, idx: usize) -> u8 {
         // x4-x17 is 112 bytes
         let args: [u8; 112] = unsafe { core::mem::transmute(self.args64) };
@@ -88,14 +87,7 @@ impl FfaMsg {
         let params: FfaParams = self.into();
         let result = ffa_smc(params);
 
-        let id = FfaFunctionId::from(result.x0);
-
-        match id {
-            FfaFunctionId::FfaMsgSendDirectReq | FfaFunctionId::FfaMsgSendDirectReq2 => {
-                Ok(result.into())
-            }
-            FfaFunctionId::FfaError => Err(FfaError::InvalidParameters),
-            _ => panic!("Unknown FfaFunctionId"),
-        }
+        // Return FfaMsg or error to caller
+        result.try_into().map_err(|_| FfaError::UnknownError)
     }
 }

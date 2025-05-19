@@ -78,7 +78,7 @@ impl FfaError {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum FfaFunctionId {
     FfaError,
     FfaSuccess64,
@@ -157,9 +157,11 @@ impl From<FfaFunctionId> for u64 {
     }
 }
 
-impl From<u64> for FfaFunctionId {
-    fn from(value: u64) -> FfaFunctionId {
-        match value {
+impl TryFrom<u64> for FfaFunctionId {
+    type Error = ();
+
+    fn try_from(value: u64) -> core::result::Result<Self, Self::Error> {
+        Ok(match value {
             0x84000060 => FfaFunctionId::FfaError,
             0x84000061 => FfaFunctionId::FfaSuccess32,
             0xc4000061 => FfaFunctionId::FfaSuccess64,
@@ -194,8 +196,8 @@ impl From<u64> for FfaFunctionId {
             0xc400008a => FfaFunctionId::FfaConsoleLog,
             0xc400008d => FfaFunctionId::FfaMsgSendDirectReq2,
             0xc400008e => FfaFunctionId::FfaMsgSendDirectResp2,
-            _ => panic!("Unknown FfaFunctionId value"),
-        }
+            _ => return Err(()),
+        })
     }
 }
 
@@ -222,7 +224,10 @@ impl Ffa {
     pub fn msg_wait(&self) -> Result<FfaMsg> {
         let msg = FfaMsg {
             function_id: FfaFunctionId::FfaMsgWait.into(),
-            ..Default::default()
+            source_id: Default::default(),
+            destination_id: Default::default(),
+            uuid: Default::default(),
+            args64: Default::default(),
         };
         msg.exec()
     }

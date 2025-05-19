@@ -1,3 +1,5 @@
+use crate::FfaError;
+
 use super::{ffa_smc, FfaFunctionId, FfaParams, Result};
 
 impl From<&FfaMemory> for FfaParams {
@@ -32,10 +34,10 @@ impl FfaMemory {
     fn exec(&self) -> Result<FfaParams> {
         let params: FfaParams = self.into();
         let result = ffa_smc(params);
-
         let err = result.x2 as i64;
+        let function_id = FfaFunctionId::try_from(result.x0).map_err(|_| FfaError::UnknownError)?;
 
-        match FfaFunctionId::from(result.x0) {
+        match function_id {
             FfaFunctionId::FfaSuccess32 | FfaFunctionId::FfaMemRetrieveResp => Ok(result),
             FfaFunctionId::FfaError => Err(err.into()),
             _ => panic!("Unknown error"),
