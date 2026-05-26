@@ -1,5 +1,11 @@
 # Copilot Instructions
 
+> **Note:** The repository root [`AGENTS.md`](../AGENTS.md) is the canonical,
+> superset guide for AI coding agents (GitHub Copilot, Claude, Cursor, Aider,
+> etc.). The content below is preserved for tools that look here first; if
+> the two files ever disagree, `AGENTS.md` wins. Please read `AGENTS.md` for
+> build, lint, test, and contribution conventions.
+
 ## Commit Messages
 - Subject line: capitalized, 50 characters or less, imperative mood (e.g., "Fix bug" not "Fixed bug")
 - Separate subject from body with a blank line
