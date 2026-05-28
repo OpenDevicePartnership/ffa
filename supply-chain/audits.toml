@@ -1,0 +1,20 @@
+
+# cargo-vet audits file
+
+[[audits.atomic]]
+who = "Jerry Xie <jerryxie@microsoft.com>"
+criteria = "safe-to-deploy"
+version = "0.6.1"
+notes = "Full: atomic wrapper for NoUninit types. Unsafe for transmute-based dispatch, sound. Assisted-by: copilot-cli:claude-opus-4.6"
+
+[[audits.bytemuck]]
+who = "Jerry Xie <jerryxie@microsoft.com>"
+criteria = "safe-to-deploy"
+version = "1.25.0"
+notes = "Full: safe transmutation library. Unsafe guarded by marker traits with size+alignment checks. Assisted-by: copilot-cli:claude-opus-4.6"
+
+[[audits.uuid]]
+who = "Jerry Xie <jerryxie@microsoft.com>"
+criteria = "safe-to-deploy"
+version = "1.23.1"
+notes = "Full: UUID per RFC 9562. Minimal unsafe: repr(transparent) transmute, NonZeroU128. Assisted-by: copilot-cli:claude-opus-4.6"

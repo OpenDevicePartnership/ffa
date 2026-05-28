@@ -9,7 +9,7 @@ repository = "https://github.com/OpenDevicePartnership/ffa"
 readme = "README.md"
 keywords = [ "no_std", "embedded" ]
 categories = [ "embedded", "no-std" ]
-rust-version = "1.75"
+rust-version = "1.85"
 
 [package.metadata.docs.rs]
 targets = [
